@@ -1,0 +1,182 @@
+package main
+
+// TODO
+// - specify cert
+// - specify ciphers
+// - GNU preamble and copyright information
+// usage header
+
+import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"strconv"
+	"time"
+)
+
+// FIXME Are the values always handleable as float64 ?
+// FIXME Are min max correctly defined?
+// FIXME Handle optional fields, especially min/max
+type Query struct {
+	HeaGder struct {
+		SourceID string `json:"source_id"`
+	} `json:"header"`
+	Payload []struct {
+		Command string `json:"command"`
+		Lines   []struct {
+			Message string `json:"message"`
+			Perf    []struct {
+				Alias    string `json:"alias"`
+				IntValue struct {
+					Critical float64 `json:"critical"`
+					Unit     string  `json:"unit"`
+					Value    float64 `json:"value"`
+					Warning  float64 `json:"warning"`
+					Minimum  float64 `json:"mininum"`
+					Maximum  float64 `json:"maximum"`
+				} `json:"int_value"`
+			} `json:"perf"`
+		} `json:"lines"`
+		Result string `json:"result"`
+	} `json:"payload"`
+}
+
+func UrlEncoded(str string) (string, error) {
+	u, err := url.Parse(str)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
+}
+
+func main() {
+	var flagURL string
+	var flagPassword string
+	var flagTimeout int
+	var flagVerbose bool
+	var flagInsecure bool
+
+	flag.StringVar(&flagURL, "u", "", "NSCLient++ URL, for example https://10.1.2.3:8443.")
+	flag.StringVar(&flagPassword, "p", "", "NSClient++ webserver password.")
+	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds, defaults to 10.")
+	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
+	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
+
+	ReturncodeMap := map[string]int{
+		"OK":       0,
+		"WARNING":  1,
+		"CRITICAL": 2,
+		"UNKNOWN":  3,
+	}
+
+	required := []string{"u", "p"}
+	flag.Parse()
+	seen := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+	for _, req := range required {
+		if !seen[req] {
+			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
+			fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+			flag.PrintDefaults()
+			os.Exit(3)
+		}
+	}
+
+	var Url string
+
+	if len(flag.Args()) == 0 {
+		Url = flagURL + "/"
+	} else if len(flag.Args()) == 1 {
+		Url = flagURL + "/query/" + flag.Arg(0)
+	} else {
+		Url = flagURL + "/query/" + flag.Arg(0) + "?"
+		for i, a := range flag.Args() {
+			if i == 0 {
+				continue
+			}
+			e, err := UrlEncoded(a)
+			if err != nil {
+				fmt.Println("UNKNOWN: " + err.Error())
+				os.Exit(3)
+			}
+			Url += e + "&"
+		}
+		// FIXME strip last "&"
+	}
+
+	var hTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: flagInsecure,
+		},
+		TLSHandshakeTimeout: time.Second * time.Duration(flagTimeout),
+	}
+	var hClient = &http.Client{
+		Timeout:   time.Second * time.Duration(flagTimeout),
+		Transport: hTransport,
+	}
+
+	req, err := http.NewRequest("GET", Url, nil)
+	if err != nil {
+		fmt.Println("UNKNOWN: " + err.Error())
+		os.Exit(3)
+	}
+	req.Header.Add("password", flagPassword)
+
+	if flagVerbose {
+		dumpreq, _ := httputil.DumpRequestOut(req, true)
+		fmt.Printf("REQUEST:\n%q\n", dumpreq)
+	}
+	res, err := hClient.Do(req)
+	if err != nil {
+		fmt.Println("UNKNOWN: " + err.Error())
+		os.Exit(3)
+	}
+	defer res.Body.Close()
+
+	if flagVerbose {
+		dumpres, _ := httputil.DumpResponse(res, true)
+		fmt.Printf("RESPONSE:\n%q\n", dumpres)
+	}
+
+	if len(flag.Args()) == 0 {
+		fmt.Println("OK: NSClient API reachable on " + flagURL)
+		os.Exit(0)
+	} else {
+		QueryResult := new(Query)
+		json.NewDecoder(res.Body).Decode(QueryResult)
+
+		// FIXME as payload is a slice, does it have to be iterable ?
+		Result := QueryResult.Payload[0].Result
+
+		var nagiosMessage string
+		var nagiosPerfdata bytes.Buffer
+		nagiosPerfdata.WriteString("|")
+
+		// FIXME as payload is a slice, does it have to be iterable ?
+		// FIXME how to iterate the slice of lines safely ?
+		for _, l := range QueryResult.Payload[0].Lines {
+
+			nagiosMessage = l.Message
+
+			for _, p := range l.Perf {
+				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
+				val := strconv.FormatFloat(p.IntValue.Value, 'f', -1, 64)
+				cri := strconv.FormatFloat(p.IntValue.Critical, 'f', -1, 64)
+				war := strconv.FormatFloat(p.IntValue.Warning, 'f', -1, 64)
+				min := strconv.FormatFloat(p.IntValue.Minimum, 'f', -1, 64)
+				max := strconv.FormatFloat(p.IntValue.Maximum, 'f', -1, 64)
+				nagiosPerfdata.WriteString("'" + p.Alias + "'=" + val + p.IntValue.Unit + ";" + war + ";" + cri + ";" + min + ";" + max + " ")
+			}
+		}
+
+		fmt.Println(nagiosMessage + nagiosPerfdata.String())
+		os.Exit(ReturncodeMap[Result])
+	}
+
+}
