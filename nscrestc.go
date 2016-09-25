@@ -4,7 +4,9 @@ package main
 // - specify cert
 // - specify ciphers
 // - GNU preamble and copyright information
-// usage header
+// - usage header
+// FIXME
+// - json optional fields
 
 import (
 	"bytes"
@@ -17,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -35,24 +38,16 @@ type Query struct {
 				Alias    string `json:"alias"`
 				IntValue struct {
 					Critical float64 `json:"critical"`
-					Unit     string  `json:"unit"`
-					Value    float64 `json:"value"`
-					Warning  float64 `json:"warning"`
-					Minimum  float64 `json:"mininum"`
-					Maximum  float64 `json:"maximum"`
+					Unit     string  `json:"unit,omitempty"`
+					Value    float64 `json:"value,omitempty"`
+					Warning  float64 `json:"warning,omitempty"`
+					Minimum  float64 `json:"mininum,omitempty"`
+					Maximum  float64 `json:"maximum,omitempty"`
 				} `json:"int_value"`
 			} `json:"perf"`
 		} `json:"lines"`
 		Result string `json:"result"`
 	} `json:"payload"`
-}
-
-func UrlEncoded(str string) (string, error) {
-	u, err := url.Parse(str)
-	if err != nil {
-		return "", err
-	}
-	return u.String(), nil
 }
 
 func main() {
@@ -88,26 +83,37 @@ func main() {
 		}
 	}
 
-	var Url string
+	var Url *url.URL
+	Url, err := url.Parse(flagURL)
+	if err != nil {
+		fmt.Println("UNKNOWN: " + err.Error())
+		os.Exit(3)
+	}
 
 	if len(flag.Args()) == 0 {
-		Url = flagURL + "/"
+		Url.Path += "/"
 	} else if len(flag.Args()) == 1 {
-		Url = flagURL + "/query/" + flag.Arg(0)
+		Url.Path += "/query/" + flag.Arg(0)
 	} else {
-		Url = flagURL + "/query/" + flag.Arg(0) + "?"
+		Url.Path += "/query/" + flag.Arg(0)
+		parameters := url.Values{}
 		for i, a := range flag.Args() {
 			if i == 0 {
 				continue
 			}
-			e, err := UrlEncoded(a)
+			p := strings.SplitN(a, "=", 2)
+			if len(p) == 1 {
+				// FIXME it is unclear if a trailing "=" e.g. on show-all can lead to errors
+				parameters.Add(p[0], "")
+			} else {
+				parameters.Add(p[0], p[1])
+			}
 			if err != nil {
 				fmt.Println("UNKNOWN: " + err.Error())
 				os.Exit(3)
 			}
-			Url += e + "&"
 		}
-		// FIXME strip last "&"
+		Url.RawQuery = parameters.Encode()
 	}
 
 	var hTransport = &http.Transport{
@@ -121,7 +127,7 @@ func main() {
 		Transport: hTransport,
 	}
 
-	req, err := http.NewRequest("GET", Url, nil)
+	req, err := http.NewRequest("GET", Url.String(), nil)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
@@ -156,6 +162,7 @@ func main() {
 
 		var nagiosMessage string
 		var nagiosPerfdata bytes.Buffer
+		// FIXME do not print on error
 		nagiosPerfdata.WriteString("|")
 
 		// FIXME as payload is a slice, does it have to be iterable ?
