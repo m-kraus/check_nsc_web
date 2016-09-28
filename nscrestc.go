@@ -6,10 +6,8 @@ package main
 // - GNU preamble and copyright information
 // - usage header
 // FIXME
-// - json optional fields
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
@@ -19,13 +17,11 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
+	"bytes"
+	"strings"
 )
 
-// FIXME Are the values always handleable as float64 ?
-// FIXME Are min max correctly defined?
-// FIXME Handle optional fields, especially min/max
 type Query struct {
 	HeaGder struct {
 		SourceID string `json:"source_id"`
@@ -37,12 +33,12 @@ type Query struct {
 			Perf    []struct {
 				Alias    string `json:"alias"`
 				IntValue struct {
-					Critical float64 `json:"critical"`
-					Unit     string  `json:"unit,omitempty"`
-					Value    float64 `json:"value,omitempty"`
-					Warning  float64 `json:"warning,omitempty"`
-					Minimum  float64 `json:"mininum,omitempty"`
-					Maximum  float64 `json:"maximum,omitempty"`
+					Value    *float64 `json:"value,omitempty"`
+					Unit     *string  `json:"unit,omitempty"`
+					Warning  *float64 `json:"warning,omitempty"`
+					Critical *float64 `json:"critical,omitempty"`
+					Minimum  *float64 `json:"mininum,omitempty"`
+					Maximum  *float64 `json:"maximum,omitempty"`
 				} `json:"int_value"`
 			} `json:"perf"`
 		} `json:"lines"`
@@ -171,14 +167,40 @@ func main() {
 
 			nagiosMessage = l.Message
 
+			val := ""
+			uni := ""
+			cri := ""
+			war := ""
+			min := ""
+			max := ""
 			for _, p := range l.Perf {
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
-				val := strconv.FormatFloat(p.IntValue.Value, 'f', -1, 64)
-				cri := strconv.FormatFloat(p.IntValue.Critical, 'f', -1, 64)
-				war := strconv.FormatFloat(p.IntValue.Warning, 'f', -1, 64)
-				min := strconv.FormatFloat(p.IntValue.Minimum, 'f', -1, 64)
-				max := strconv.FormatFloat(p.IntValue.Maximum, 'f', -1, 64)
-				nagiosPerfdata.WriteString("'" + p.Alias + "'=" + val + p.IntValue.Unit + ";" + war + ";" + cri + ";" + min + ";" + max + " ")
+				if p.IntValue.Value != nil {
+					val = strconv.FormatFloat(*(p.IntValue.Value), 'f', -1, 64)
+					nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + val)
+				} else {
+					continue
+				}
+				if p.IntValue.Unit != nil {
+					uni = *(p.IntValue.Unit)
+					nagiosPerfdata.WriteString(uni)
+				}
+				if p.IntValue.Warning != nil {
+					war = strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64)
+					nagiosPerfdata.WriteString(";" + war)
+				}
+				if p.IntValue.Critical != nil {
+					cri = strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64)
+					nagiosPerfdata.WriteString(";" + cri)
+				}
+				if p.IntValue.Minimum != nil {
+					min = strconv.FormatFloat(*(p.IntValue.Minimum), 'f', -1, 64)
+					nagiosPerfdata.WriteString(";" + min)
+				}
+				if p.IntValue.Maximum != nil {
+					max = strconv.FormatFloat(*(p.IntValue.Maximum), 'f', -1, 64)
+					nagiosPerfdata.WriteString(";" + max)
+				}
 			}
 		}
 

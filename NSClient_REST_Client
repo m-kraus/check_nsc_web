@@ -103,3 +103,5 @@ https://192.168.33.10:8443/query/check_eventlog?file=system&filter=id&crit=count
         "result": "CRITICAL"
     }]
 }
+
+go run nscrestc.go -u "https://192.168.33.10:8443" -p "password" -k check_cpu show-all "warning=load > 1"
