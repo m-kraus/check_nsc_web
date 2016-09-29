@@ -87,11 +87,9 @@ func main() {
 		os.Exit(3)
 	}
 
-	if len(flag.Args()) == 0 {
-		Url.Path += "/"
-	} else if len(flag.Args()) == 1 {
+	if len(flag.Args()) == 1 {
 		Url.Path += "/query/" + flag.Arg(0)
-	} else {
+	} else if len(flag.Args()) != 0 {
 		Url.Path += "/query/" + flag.Arg(0)
 		parameters := url.Values{}
 		for i, a := range flag.Args() {
