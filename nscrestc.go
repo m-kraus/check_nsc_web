@@ -159,14 +159,12 @@ func main() {
 
 		var nagiosMessage string
 		var nagiosPerfdata bytes.Buffer
-		// FIXME do not print on error
-		nagiosPerfdata.WriteString("|")
 
 		// FIXME as payload is a slice, does it have to be iterable ?
 		// FIXME how to iterate the slice of lines safely ?
 		for _, l := range QueryResult.Payload[0].Lines {
 
-			nagiosMessage = l.Message
+			nagiosMessage = strings.TrimSpace(l.Message)
 
 			val := ""
 			uni := ""
@@ -205,7 +203,11 @@ func main() {
 			}
 		}
 
-		fmt.Println(nagiosMessage + nagiosPerfdata.String())
+		if nagiosPerfdata.Len() == 0 {
+			fmt.Println(nagiosMessage)
+		} else {
+			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
+		}
 		os.Exit(ReturncodeMap[Result])
 	}
 
