@@ -23,6 +23,7 @@ import (
 	"strings"
 )
 
+//Query represents the nsclient response
 type Query struct {
 	HeaGder struct {
 		SourceID string `json:"source_id"`
