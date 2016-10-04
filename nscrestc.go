@@ -80,18 +80,18 @@ func main() {
 		}
 	}
 
-	Url, err := url.Parse(flagURL)
+	url, err := url.Parse(flagURL)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
 	}
 
 	if len(flag.Args()) == 0 {
-		Url.Path += "/"
+		url.Path += "/"
 	} else if len(flag.Args()) == 1 {
-		Url.Path += "/query/" + flag.Arg(0)
+		url.Path += "/query/" + flag.Arg(0)
 	} else {
-		Url.Path += "/query/" + flag.Arg(0)
+		url.Path += "/query/" + flag.Arg(0)
 		parameters := url.Values{}
 		for i, a := range flag.Args() {
 			if i == 0 {
@@ -109,7 +109,7 @@ func main() {
 				os.Exit(3)
 			}
 		}
-		Url.RawQuery = parameters.Encode()
+		url.RawQuery = parameters.Encode()
 	}
 
 	var hTransport = &http.Transport{
@@ -123,7 +123,7 @@ func main() {
 		Transport: hTransport,
 	}
 
-	req, err := http.NewRequest("GET", Url.String(), nil)
+	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
