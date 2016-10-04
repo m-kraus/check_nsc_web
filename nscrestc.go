@@ -23,6 +23,7 @@ import (
 	"strings"
 )
 
+//Query represents the nsclient response
 type Query struct {
 	HeaGder struct {
 		SourceID string `json:"source_id"`
@@ -67,11 +68,10 @@ func main() {
 		"UNKNOWN":  3,
 	}
 
-	required := []string{"u", "p"}
 	flag.Parse()
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
-	for _, req := range required {
+	for _, req := range []string{"u", "p"} {
 		if !seen[req] {
 			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
 			fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -80,19 +80,18 @@ func main() {
 		}
 	}
 
-	var Url *url.URL
-	Url, err := url.Parse(flagURL)
+	urlStruct, err := url.Parse(flagURL)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
 	}
 
 	if len(flag.Args()) == 0 {
-		Url.Path += "/"
+		urlStruct.Path += "/"
 	} else if len(flag.Args()) == 1 {
-		Url.Path += "/query/" + flag.Arg(0)
+		urlStruct.Path += "/query/" + flag.Arg(0)
 	} else {
-		Url.Path += "/query/" + flag.Arg(0)
+		urlStruct.Path += "/query/" + flag.Arg(0)
 		parameters := url.Values{}
 		for i, a := range flag.Args() {
 			if i == 0 {
@@ -110,7 +109,7 @@ func main() {
 				os.Exit(3)
 			}
 		}
-		Url.RawQuery = parameters.Encode()
+		urlStruct.RawQuery = parameters.Encode()
 	}
 
 	var hTransport = &http.Transport{
@@ -124,7 +123,7 @@ func main() {
 		Transport: hTransport,
 	}
 
-	req, err := http.NewRequest("GET", Url.String(), nil)
+	req, err := http.NewRequest("GET", urlStruct.String(), nil)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
