@@ -5,7 +5,6 @@ package main
 // - specify ciphers
 // - GNU preamble and copyright information
 // - usage header
-// - make Perf optional -> no perfdata pipe gets printed on Unknown for example
 // FIXME
 
 import (
