@@ -79,7 +79,6 @@ func main() {
 		}
 	}
 
-	var Url *url.URL
 	Url, err := url.Parse(flagURL)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
