@@ -24,7 +24,7 @@ import (
 
 //Query represents the nsclient response
 type Query struct {
-	HeaGder struct {
+	Header struct {
 		SourceID string `json:"source_id"`
 	} `json:"header"`
 	Payload []struct {
