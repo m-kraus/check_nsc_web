@@ -164,39 +164,27 @@ func main() {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
-			val := ""
-			uni := ""
-			cri := ""
-			war := ""
-			min := ""
-			max := ""
 			for _, p := range l.Perf {
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
 				if p.IntValue.Value != nil {
-					val = strconv.FormatFloat(*(p.IntValue.Value), 'f', -1, 64)
-					nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + val)
+					nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + strconv.FormatFloat(*(p.IntValue.Value), 'f', -1, 64))
 				} else {
 					continue
 				}
 				if p.IntValue.Unit != nil {
-					uni = *(p.IntValue.Unit)
-					nagiosPerfdata.WriteString(uni)
+					nagiosPerfdata.WriteString(*(p.IntValue.Unit))
 				}
 				if p.IntValue.Warning != nil {
-					war = strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64)
-					nagiosPerfdata.WriteString(";" + war)
+					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64))
 				}
 				if p.IntValue.Critical != nil {
-					cri = strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64)
-					nagiosPerfdata.WriteString(";" + cri)
+					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64))
 				}
 				if p.IntValue.Minimum != nil {
-					min = strconv.FormatFloat(*(p.IntValue.Minimum), 'f', -1, 64)
-					nagiosPerfdata.WriteString(";" + min)
+					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Minimum), 'f', -1, 64))
 				}
 				if p.IntValue.Maximum != nil {
-					max = strconv.FormatFloat(*(p.IntValue.Maximum), 'f', -1, 64)
-					nagiosPerfdata.WriteString(";" + max)
+					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Maximum), 'f', -1, 64))
 				}
 			}
 		}
