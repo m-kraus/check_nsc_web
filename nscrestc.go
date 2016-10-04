@@ -67,11 +67,10 @@ func main() {
 		"UNKNOWN":  3,
 	}
 
-	required := []string{"u", "p"}
 	flag.Parse()
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
-	for _, req := range required {
+	for _, req := range []string{"u", "p"} {
 		if !seen[req] {
 			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
 			fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
