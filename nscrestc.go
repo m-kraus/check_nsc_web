@@ -8,6 +8,7 @@ package main
 // FIXME
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
@@ -17,9 +18,8 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"time"
-	"bytes"
 	"strings"
+	"time"
 )
 
 //Query represents the nsclient response
@@ -69,7 +69,9 @@ func main() {
 
 	flag.Parse()
 	seen := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+	flag.Visit(func(f *flag.Flag) {
+		seen[f.Name] = true
+	})
 	for _, req := range []string{"u", "p"} {
 		if !seen[req] {
 			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
@@ -149,18 +151,23 @@ func main() {
 		fmt.Println("OK: NSClient API reachable on " + flagURL)
 		os.Exit(0)
 	} else {
-		QueryResult := new(Query)
-		json.NewDecoder(res.Body).Decode(QueryResult)
+		queryResult := new(Query)
+		json.NewDecoder(res.Body).Decode(queryResult)
 
-		// FIXME as payload is a slice, does it have to be iterable ?
-		Result := QueryResult.Payload[0].Result
+		if len(queryResult.Payload) == 0 {
+			if flagVerbose {
+				fmt.Printf("QUERY RESULT:\n%+v\n", queryResult)
+			}
+			fmt.Println("UNKNOWN: The resultpayload size is 0")
+			os.Exit(3)
+		}
+		result := queryResult.Payload[0].Result
 
 		var nagiosMessage string
 		var nagiosPerfdata bytes.Buffer
 
-		// FIXME as payload is a slice, does it have to be iterable ?
 		// FIXME how to iterate the slice of lines safely ?
-		for _, l := range QueryResult.Payload[0].Lines {
+		for _, l := range queryResult.Payload[0].Lines {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
@@ -194,7 +201,7 @@ func main() {
 		} else {
 			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
 		}
-		os.Exit(ReturncodeMap[Result])
+		os.Exit(ReturncodeMap[result])
 	}
 
 }
