@@ -8,6 +8,7 @@ package main
 // FIXME
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
@@ -17,9 +18,8 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"time"
-	"bytes"
 	"strings"
+	"time"
 )
 
 //Query represents the nsclient response
@@ -69,7 +69,9 @@ func main() {
 
 	flag.Parse()
 	seen := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
+	flag.Visit(func(f *flag.Flag) {
+		seen[f.Name] = true
+	})
 	for _, req := range []string{"u", "p"} {
 		if !seen[req] {
 			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
@@ -130,7 +132,10 @@ func main() {
 	req.Header.Add("password", flagPassword)
 
 	if flagVerbose {
-		dumpreq, _ := httputil.DumpRequestOut(req, true)
+		dumpreq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			fmt.Printf("REQUEST-ERROR:\n%s\n", err.Error())
+		}
 		fmt.Printf("REQUEST:\n%q\n", dumpreq)
 	}
 	res, err := hClient.Do(req)
@@ -141,7 +146,10 @@ func main() {
 	defer res.Body.Close()
 
 	if flagVerbose {
-		dumpres, _ := httputil.DumpResponse(res, true)
+		dumpres, err := httputil.DumpResponse(res, true)
+		if err != nil {
+			fmt.Printf("RESPONSE-ERROR:\n%s\n", err.Error())
+		}
 		fmt.Printf("RESPONSE:\n%q\n", dumpres)
 	}
 
@@ -150,7 +158,11 @@ func main() {
 		os.Exit(0)
 	} else {
 		QueryResult := new(Query)
-		json.NewDecoder(res.Body).Decode(QueryResult)
+		err = json.NewDecoder(res.Body).Decode(QueryResult)
+		if err != nil {
+			fmt.Println("UNKNOWN: " + err.Error())
+			os.Exit(3)
+		}
 
 		// FIXME as payload is a slice, does it have to be iterable ?
 		Result := QueryResult.Payload[0].Result
