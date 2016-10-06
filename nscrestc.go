@@ -157,22 +157,23 @@ func main() {
 		fmt.Println("OK: NSClient API reachable on " + flagURL)
 		os.Exit(0)
 	} else {
-		QueryResult := new(Query)
-		err = json.NewDecoder(res.Body).Decode(QueryResult)
-		if err != nil {
-			fmt.Println("UNKNOWN: " + err.Error())
+		queryResult := new(Query)
+		json.NewDecoder(res.Body).Decode(queryResult)
+
+		if len(queryResult.Payload) == 0 {
+			if flagVerbose {
+				fmt.Printf("QUERY RESULT:\n%+v\n", queryResult)
+			}
+			fmt.Println("UNKNOWN: The resultpayload size is 0")
 			os.Exit(3)
 		}
-
-		// FIXME as payload is a slice, does it have to be iterable ?
-		Result := QueryResult.Payload[0].Result
+		result := queryResult.Payload[0].Result
 
 		var nagiosMessage string
 		var nagiosPerfdata bytes.Buffer
 
-		// FIXME as payload is a slice, does it have to be iterable ?
 		// FIXME how to iterate the slice of lines safely ?
-		for _, l := range QueryResult.Payload[0].Lines {
+		for _, l := range queryResult.Payload[0].Lines {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
@@ -206,7 +207,7 @@ func main() {
 		} else {
 			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
 		}
-		os.Exit(ReturncodeMap[Result])
+		os.Exit(ReturncodeMap[result])
 	}
 
 }
