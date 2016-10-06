@@ -31,7 +31,7 @@ nscrestc -k -p "password from nsclient.ini" -u "https://<SERVER_RUNNING_NSCLIENT
 OK: All 1 service(s) are ok.|'BvSshServer'=4;0;0
 ```
 
-* Complex enevtlog check
+* Complex eventlog check
 ```
 nscrestc -k -p "password from nsclient.ini" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_eventlog "file=system" "filter=id=8000" "crit=count>0" "detail-syntax=\${message}" show-all "scan-range=-900m"
 OK: No entries found|'count'=0;0;0 'problem_count'=0;0;0
