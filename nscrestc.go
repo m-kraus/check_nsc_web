@@ -1,28 +1,4 @@
-/*
-  nscrestc
-
-  Copyright 2016 Michael Kraus <Michael.Kraus@consol.de>
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 package main
-
-// TODO
-// - specify cert
-// - specify ciphers
-// - usage header
 
 import (
 	"bytes"
@@ -38,6 +14,40 @@ import (
 	"strings"
 	"time"
 )
+
+// TODO
+// - specify cert
+// - specify ciphers
+// -- http://www.levigross.com/2015/11/21/mutual-tls-authentication-in-go/
+// -- http://johnnadratowski.github.io/2016/08/05/golang-tls.html
+
+var usage = `
+  nscrestc is a REST client for the NSClient++ webserver for querying
+  and receiving check information over HTTPS.
+
+  Copyright 2016 Michael Kraus <Michael.Kraus@consol.de>
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Example:
+  nscrestc -p "password" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_cpu
+  
+  Usage:
+  nscrestc [options] [NSClient query parameters]
+  
+  Options:
+`
 
 //Query represents the nsclient response
 type Query struct {
@@ -65,6 +75,11 @@ type Query struct {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage)
+		flag.PrintDefaults()
+	}
+
 	var flagURL string
 	var flagPassword string
 	var flagTimeout int
@@ -93,7 +108,7 @@ func main() {
 		if !seen[req] {
 			fmt.Fprintf(os.Stderr, "UNKNOWN: Missing required -%s argument\n", req)
 			fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-			flag.PrintDefaults()
+			flag.Usage()
 			os.Exit(3)
 		}
 	}
@@ -132,6 +147,8 @@ func main() {
 
 	var hTransport = &http.Transport{
 		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS10,
+			MaxVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: flagInsecure,
 		},
 		TLSHandshakeTimeout: time.Second * time.Duration(flagTimeout),
