@@ -25,11 +25,11 @@ package main
 // - usage header
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/griesbacher/check_x"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -77,13 +77,6 @@ func main() {
 	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 
-	ReturncodeMap := map[string]int{
-		"OK":       0,
-		"WARNING":  1,
-		"CRITICAL": 2,
-		"UNKNOWN":  3,
-	}
-
 	flag.Parse()
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) {
@@ -99,10 +92,7 @@ func main() {
 	}
 
 	urlStruct, err := url.Parse(flagURL)
-	if err != nil {
-		fmt.Println("UNKNOWN: " + err.Error())
-		os.Exit(3)
-	}
+	check_x.ExitOnError(err)
 
 	if len(flag.Args()) == 0 {
 		urlStruct.Path += "/"
@@ -122,10 +112,6 @@ func main() {
 			} else {
 				parameters.Add(p[0], p[1])
 			}
-			if err != nil {
-				fmt.Println("UNKNOWN: " + err.Error())
-				os.Exit(3)
-			}
 		}
 		urlStruct.RawQuery = parameters.Encode()
 	}
@@ -142,10 +128,8 @@ func main() {
 	}
 
 	req, err := http.NewRequest("GET", urlStruct.String(), nil)
-	if err != nil {
-		fmt.Println("UNKNOWN: " + err.Error())
-		os.Exit(3)
-	}
+	check_x.ExitOnError(err)
+
 	req.Header.Add("password", flagPassword)
 
 	if flagVerbose {
@@ -156,10 +140,7 @@ func main() {
 		fmt.Printf("REQUEST:\n%q\n", dumpreq)
 	}
 	res, err := hClient.Do(req)
-	if err != nil {
-		fmt.Println("UNKNOWN: " + err.Error())
-		os.Exit(3)
-	}
+	check_x.ExitOnError(err)
 	defer res.Body.Close()
 
 	if flagVerbose {
@@ -171,60 +152,53 @@ func main() {
 	}
 
 	if len(flag.Args()) == 0 {
-		fmt.Println("OK: NSClient API reachable on " + flagURL)
-		os.Exit(0)
+		check_x.Exit(check_x.OK, "NSClient API reachable on " + flagURL)
 	} else {
 		queryResult := new(Query)
-		json.NewDecoder(res.Body).Decode(queryResult)
+		err = json.NewDecoder(res.Body).Decode(queryResult)
+		check_x.ExitOnError(err)
 
 		if len(queryResult.Payload) == 0 {
 			if flagVerbose {
 				fmt.Printf("QUERY RESULT:\n%+v\n", queryResult)
 			}
-			fmt.Println("UNKNOWN: The resultpayload size is 0")
-			os.Exit(3)
+			check_x.Exit(check_x.Unknown, "The resultpayload size is 0")
 		}
 		result := queryResult.Payload[0].Result
 
 		var nagiosMessage string
-		var nagiosPerfdata bytes.Buffer
 
 		// FIXME how to iterate the slice of lines safely ?
 		for _, l := range queryResult.Payload[0].Lines {
-
-			nagiosMessage = strings.TrimSpace(l.Message)
+			nagiosMessage += strings.TrimSpace(l.Message)
 
 			for _, p := range l.Perf {
-				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
-				if p.IntValue.Value != nil {
-					nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + strconv.FormatFloat(*(p.IntValue.Value), 'f', -1, 64))
-				} else {
-					continue
-				}
-				if p.IntValue.Unit != nil {
-					nagiosPerfdata.WriteString(*(p.IntValue.Unit))
-				}
-				if p.IntValue.Warning != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64))
-				}
-				if p.IntValue.Critical != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64))
-				}
-				if p.IntValue.Minimum != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Minimum), 'f', -1, 64))
-				}
-				if p.IntValue.Maximum != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Maximum), 'f', -1, 64))
+				if p.IntValue.Value != nil && p.Alias != "" {
+					perf := check_x.NewPerformanceData(p.Alias, *(p.IntValue.Value))
+
+					if p.IntValue.Unit != nil {
+						perf.Unit(*(p.IntValue.Unit))
+					}
+					if p.IntValue.Warning != nil {
+						w, err := check_x.NewThreshold(strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64))
+						check_x.ExitOnError(err) //Should never happen
+						perf.Warn(w)
+					}
+					if p.IntValue.Critical != nil {
+						c, err := check_x.NewThreshold(strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64))
+						check_x.ExitOnError(err) //Should never happen
+						perf.Crit(c)
+					}
+					if p.IntValue.Minimum != nil {
+						perf.Min(*(p.IntValue.Minimum))
+					}
+					if p.IntValue.Maximum != nil {
+						perf.Max(*(p.IntValue.Maximum))
+					}
 				}
 			}
 		}
-
-		if nagiosPerfdata.Len() == 0 {
-			fmt.Println(nagiosMessage)
-		} else {
-			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
-		}
-		os.Exit(ReturncodeMap[result])
+		check_x.Exit(check_x.StateFromString(result), nagiosMessage)
 	}
 
 }
