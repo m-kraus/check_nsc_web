@@ -152,7 +152,7 @@ func main() {
 	}
 
 	if len(flag.Args()) == 0 {
-		check_x.Exit(check_x.OK, "NSClient API reachable on " + flagURL)
+		check_x.Exit(check_x.OK, "NSClient API reachable on "+flagURL)
 	} else {
 		queryResult := new(Query)
 		err = json.NewDecoder(res.Body).Decode(queryResult)
