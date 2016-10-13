@@ -60,14 +60,22 @@ type Query struct {
 			Message string `json:"message"`
 			Perf    []struct {
 				Alias    string `json:"alias"`
-				IntValue struct {
+				IntValue *struct {
+					Value    *int64  `json:"value,omitempty"`
+					Unit     *string `json:"unit,omitempty"`
+					Warning  *int64  `json:"warning,omitempty"`
+					Critical *int64  `json:"critical,omitempty"`
+					Minimum  *int64  `json:"minimum,omitempty"`
+					Maximum  *int64  `json:"maximum,omitempty"`
+				} `json:"int_value,omitempty"`
+				FloatValue *struct {
 					Value    *float64 `json:"value,omitempty"`
 					Unit     *string  `json:"unit,omitempty"`
 					Warning  *float64 `json:"warning,omitempty"`
 					Critical *float64 `json:"critical,omitempty"`
-					Minimum  *float64 `json:"mininum,omitempty"`
+					Minimum  *float64 `json:"minimum,omitempty"`
 					Maximum  *float64 `json:"maximum,omitempty"`
-				} `json:"int_value"`
+				} `json:"float_value,omitempty"`
 			} `json:"perf"`
 		} `json:"lines"`
 		Result string `json:"result"`
@@ -211,28 +219,60 @@ func main() {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
+			val := ""
+			uni := ""
+			war := ""
+			cri := ""
+			min := ""
+			max := ""
 			for _, p := range l.Perf {
+				// FIXME what if crit is set but not warn - there need to be unfilled semicolons
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
-				if p.IntValue.Value != nil {
-					nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + strconv.FormatFloat(*(p.IntValue.Value), 'f', -1, 64))
-				} else {
-					continue
+				if p.FloatValue != nil {
+					if p.FloatValue.Value != nil {
+						val = strconv.FormatFloat(*(p.FloatValue.Value), 'f', -1, 64)
+					} else {
+						continue
+					}
+					if p.FloatValue.Unit != nil {
+						uni = (*(p.FloatValue.Unit))
+					}
+					if p.FloatValue.Warning != nil {
+						war = strconv.FormatFloat(*(p.FloatValue.Warning), 'f', -1, 64)
+					}
+					if p.FloatValue.Critical != nil {
+						cri = strconv.FormatFloat(*(p.FloatValue.Critical), 'f', -1, 64)
+					}
+					if p.FloatValue.Minimum != nil {
+						min = strconv.FormatFloat(*(p.FloatValue.Minimum), 'f', -1, 64)
+					}
+					if p.FloatValue.Maximum != nil {
+						max = strconv.FormatFloat(*(p.FloatValue.Maximum), 'f', -1, 64)
+					}
 				}
-				if p.IntValue.Unit != nil {
-					nagiosPerfdata.WriteString(*(p.IntValue.Unit))
+				if p.IntValue != nil {
+					if p.IntValue.Value != nil {
+						val = strconv.FormatInt(*(p.IntValue.Value), 10)
+					} else {
+						continue
+					}
+					if p.IntValue.Unit != nil {
+						uni = (*(p.IntValue.Unit))
+					}
+					if p.IntValue.Warning != nil {
+						war = strconv.FormatInt(*(p.IntValue.Warning), 10)
+					}
+					if p.IntValue.Critical != nil {
+						cri = strconv.FormatInt(*(p.IntValue.Critical), 10)
+					}
+					if p.IntValue.Minimum != nil {
+						min = strconv.FormatInt(*(p.IntValue.Minimum), 10)
+					}
+					if p.IntValue.Maximum != nil {
+						max = strconv.FormatInt(*(p.IntValue.Maximum), 10)
+					}
 				}
-				if p.IntValue.Warning != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Warning), 'f', -1, 64))
-				}
-				if p.IntValue.Critical != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Critical), 'f', -1, 64))
-				}
-				if p.IntValue.Minimum != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Minimum), 'f', -1, 64))
-				}
-				if p.IntValue.Maximum != nil {
-					nagiosPerfdata.WriteString(";" + strconv.FormatFloat(*(p.IntValue.Maximum), 'f', -1, 64))
-				}
+				nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + val + uni + ";" + war + ";" + cri + ";" + min + ";" + max)
 			}
 		}
 
