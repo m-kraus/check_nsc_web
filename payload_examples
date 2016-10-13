@@ -1,0 +1,120 @@
+   "payload":[  
+      {  
+         "command":"check_drivesize",
+         "lines":[  
+            {  
+               "message":"OK All 1 drive(s) are ok",
+               "perf":[  
+                  {  
+                     "alias":"c: free",
+                     "float_value":{  
+                        "critical":5.9656246183440089,
+                        "maximum":59.656246185302734,
+                        "minimum":0.00000000000000000,
+                        "unit":"GB",
+                        "value":50.322532653808594,
+                        "warning":0.00000000000000000
+                     }
+                  },
+                  {  
+                     "alias":"c: free %",
+                     "float_value":{  
+                        "critical":10.000000000000000,
+                        "maximum":100.00000000000000,
+                        "minimum":0.00000000000000000,
+                        "unit":"%",
+                        "value":84.000000000000000,
+                        "warning":0.00000000000000000
+                     }
+                  },
+                  {  
+                     "alias":"c: used",
+                     "float_value":{  
+                        "critical":0.00000000000000000,
+                        "maximum":59.656246185302734,
+                        "minimum":0.00000000000000000,
+                        "unit":"GB",
+                        "value":9.3337135314941406,
+                        "warning":47.724996947683394
+                     }
+                  },
+                  {  
+                     "alias":"c: used %",
+                     "float_value":{  
+                        "critical":0.00000000000000000,
+                        "maximum":100.00000000000000,
+                        "minimum":0.00000000000000000,
+                        "unit":"%",
+                        "value":16.000000000000000,
+                        "warning":80.000000000000000
+                     }
+                  }
+               ]
+            }
+         ],
+         "result":"OK"
+      }
+   ]
+
+   "payload":[
+      {
+         "command":"check_pdh",
+         "lines":[
+            {
+               "message":"WARNING: \\\\System\\\\System Up Time = 459",
+               "perf":[
+                  {
+                     "alias":"\\\\System\\\\System Up Time_value",
+                     "float_value":{
+                        "critical":9999.0000000000000,
+                        "value":459.00000000000000,
+                        "warning":5.0000000000000000
+                     }
+                  }
+               ]
+            }
+         ],
+         "result":"WARNING"
+      }
+   ]
+
+   "payload":[
+      {
+         "command":"check_cpu",
+         "lines":[
+            {
+               "message":"OK: CPU load is ok.",
+               "perf":[
+                  {
+                     "alias":"total 5m",
+                     "int_value":{
+                        "critical":90,
+                        "unit":"%",
+                        "value":2,
+                        "warning":80
+                     }
+                  },
+                  {
+                     "alias":"total 1m",
+                     "int_value":{
+                        "critical":90,
+                        "unit":"%",
+                        "value":0,
+                        "warning":80
+                     }
+                  },
+                  {
+                     "alias":"total 5s",
+                     "int_value":{
+                        "critical":90,
+                        "unit":"%",
+                        "value":0,
+                        "warning":80
+                     }
+                  }
+               ]
+            }
+         ],
+         "result":"OK"
+      }
+   ]
