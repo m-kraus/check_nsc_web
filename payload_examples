@@ -118,3 +118,27 @@
          "result":"OK"
       }
    ]
+   
+    "payload": [{
+        "command": "check_eventlog",
+        "lines": [{
+            "message": "CRITICAL: 1 message(s) critical(The system time has changed to â\u0080\u008E2016â\u0080\u008E-â\u0080\u008E09â\u0080\u008E-â\u0080\u008E19T06:48:47.308000000Z from â\u0080\u008E2016â\u0080\u008E-â\u0080\u008E09â\u0080\u008E-â\u0080\u008E19T13:48:45.811693700Z.  Change Reason: An application or system component changed the time.), The system time has changed to â\u0080\u008E2016â\u0080\u008E-â\u0080\u008E09â\u0080\u008E-â\u0080\u008E19T06:48:47.308000000Z from â\u0080\u008E2016â\u0080\u008E-â\u0080\u008E09â\u0080\u008E-â\u0080\u008E19T13:48:45.811693700Z.  Change Reason: An application or system component changed the time.",
+            "perf": [{
+                "alias": "count",
+                "int_value": {
+                    "critical": 0,
+                    "value": 1,
+                    "warning": 0
+                }
+            }, {
+                "alias": "problem_count",
+                "int_value": {
+                    "critical": 0,
+                    "value": 0,
+                    "warning": 0
+                }
+            }]
+        }],
+        "result": "CRITICAL"
+    }]
+    
