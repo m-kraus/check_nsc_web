@@ -95,12 +95,14 @@ func main() {
 	var flagTimeout int
 	var flagVerbose bool
 	var flagInsecure bool
+	var flagFloatround int
 
 	flag.StringVar(&flagURL, "u", "", "NSCLient++ URL, for example https://10.1.2.3:8443.")
 	flag.StringVar(&flagPassword, "p", "", "NSClient++ webserver password.")
 	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds, defaults to 10.")
 	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
+	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
 
 	ReturncodeMap := map[string]int{
 		"OK":       0,
@@ -232,7 +234,7 @@ func main() {
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
 				if p.FloatValue != nil {
 					if p.FloatValue.Value != nil {
-						val = strconv.FormatFloat(*(p.FloatValue.Value), 'f', -1, 64)
+						val = strconv.FormatFloat(*(p.FloatValue.Value), 'f', flagFloatround, 64)
 					} else {
 						continue
 					}
@@ -240,16 +242,16 @@ func main() {
 						uni = (*(p.FloatValue.Unit))
 					}
 					if p.FloatValue.Warning != nil {
-						war = strconv.FormatFloat(*(p.FloatValue.Warning), 'f', -1, 64)
+						war = strconv.FormatFloat(*(p.FloatValue.Warning), 'f', flagFloatround, 64)
 					}
 					if p.FloatValue.Critical != nil {
-						cri = strconv.FormatFloat(*(p.FloatValue.Critical), 'f', -1, 64)
+						cri = strconv.FormatFloat(*(p.FloatValue.Critical), 'f', flagFloatround, 64)
 					}
 					if p.FloatValue.Minimum != nil {
-						min = strconv.FormatFloat(*(p.FloatValue.Minimum), 'f', -1, 64)
+						min = strconv.FormatFloat(*(p.FloatValue.Minimum), 'f', flagFloatround, 64)
 					}
 					if p.FloatValue.Maximum != nil {
-						max = strconv.FormatFloat(*(p.FloatValue.Maximum), 'f', -1, 64)
+						max = strconv.FormatFloat(*(p.FloatValue.Maximum), 'f', flagFloatround, 64)
 					}
 				}
 				if p.IntValue != nil {

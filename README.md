@@ -40,6 +40,8 @@ OK: No entries found|'count'=0;0;0 'problem_count'=0;0;0
 ## Program help
 ```
 Usage of ./nscrestc:
+  -f  int
+      Round performance data float values to this number of digits
   -k	Insecure mode - skip TLS verification.
   -p string
     	NSClient++ webserver password.
