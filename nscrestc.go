@@ -45,6 +45,8 @@ var usage = `
   
   Usage:
   nscrestc [options] [NSClient query parameters]
+
+  nscrestc can and should be built with CGO_ENABLED=0
   
   Options:
 `
