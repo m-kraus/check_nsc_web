@@ -22,7 +22,7 @@ import (
 // -- http://johnnadratowski.github.io/2016/08/05/golang-tls.html
 
 var usage = `
-  nscrestc is a REST client for the NSClient++ webserver for querying
+  check_nsc_web is a REST client for the NSClient++ webserver for querying
   and receiving check information over HTTPS.
 
   Copyright 2016 Michael Kraus <Michael.Kraus@consol.de>
@@ -41,13 +41,13 @@ var usage = `
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
   
   Example:
-  nscrestc -p "password" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_cpu
-  
-  Usage:
-  nscrestc [options] [NSClient query parameters]
+  check_nsc_web -p "password" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_cpu
 
-  nscrestc can and should be built with CGO_ENABLED=0
-  
+  Usage:
+  check_nsc_web [options] [NSClient query parameters]
+
+  check_nsc_web can and should be built with CGO_ENABLED=0
+
   Options:
 `
 
