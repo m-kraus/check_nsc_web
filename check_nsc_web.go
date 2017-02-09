@@ -39,7 +39,7 @@ var usage = `
 
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  
+
   Example:
   check_nsc_web -p "password" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_cpu
 
@@ -137,24 +137,26 @@ func main() {
 		urlStruct.Path += "/query/" + flag.Arg(0)
 	} else {
 		urlStruct.Path += "/query/" + flag.Arg(0)
-		parameters := url.Values{}
+		var param bytes.Buffer
 		for i, a := range flag.Args() {
 			if i == 0 {
 				continue
+			} else if i > 1 {
+				param.WriteString("&")
 			}
+
 			p := strings.SplitN(a, "=", 2)
 			if len(p) == 1 {
-				// FIXME it is unclear if a trailing "=" e.g. on show-all can lead to errors
-				parameters.Add(p[0], "")
+				param.WriteString(url.QueryEscape(p[0]))
 			} else {
-				parameters.Add(p[0], p[1])
+				param.WriteString(url.QueryEscape(p[0]) + "=" + url.QueryEscape(p[1]))
 			}
 			if err != nil {
 				fmt.Println("UNKNOWN: " + err.Error())
 				os.Exit(3)
 			}
 		}
-		urlStruct.RawQuery = parameters.Encode()
+		urlStruct.RawQuery = param.String()
 	}
 
 	var hTransport = &http.Transport{
