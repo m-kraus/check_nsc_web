@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -125,6 +126,8 @@ func main() {
 		}
 	}
 
+	timeout := time.Second * time.Duration(flagTimeout)
+
 	urlStruct, err := url.Parse(flagURL)
 	if err != nil {
 		fmt.Println("UNKNOWN: " + err.Error())
@@ -165,10 +168,14 @@ func main() {
 			MaxVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: flagInsecure,
 		},
-		TLSHandshakeTimeout: time.Second * time.Duration(flagTimeout),
+		Dial: (&net.Dialer{
+			Timeout: timeout,
+		}).Dial,
+		ResponseHeaderTimeout: timeout,
+		TLSHandshakeTimeout:   timeout,
 	}
 	var hClient = &http.Client{
-		Timeout:   time.Second * time.Duration(flagTimeout),
+		Timeout:   timeout,
 		Transport: hTransport,
 	}
 
