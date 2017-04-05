@@ -22,6 +22,8 @@ import (
 // -- http://www.levigross.com/2015/11/21/mutual-tls-authentication-in-go/
 // -- http://johnnadratowski.github.io/2016/08/05/golang-tls.html
 
+const AppVersion = "0.4.2"
+
 var usage = `
   check_nsc_web is a REST client for the NSClient++ webserver for querying
   and receiving check information over HTTPS.
@@ -87,6 +89,7 @@ type Query struct {
 
 func main() {
 	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "check_nsc_web v"+AppVersion)
 		fmt.Fprintf(os.Stderr, usage)
 		flag.PrintDefaults()
 	}
@@ -95,6 +98,7 @@ func main() {
 	var flagPassword string
 	var flagTimeout int
 	var flagVerbose bool
+	var flagVersion bool
 	var flagInsecure bool
 	var flagFloatround int
 
@@ -102,6 +106,7 @@ func main() {
 	flag.StringVar(&flagPassword, "p", "", "NSClient++ webserver password.")
 	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds, defaults to 10.")
 	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
+	flag.BoolVar(&flagVersion, "V", false, "Print program version.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
 
@@ -113,6 +118,10 @@ func main() {
 	}
 
 	flag.Parse()
+	if flagVersion {
+		fmt.Fprintln(os.Stderr, "check_nsc_web v"+AppVersion)
+		os.Exit(0)
+	}
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) {
 		seen[f.Name] = true
