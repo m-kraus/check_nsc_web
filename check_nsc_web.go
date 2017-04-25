@@ -22,7 +22,7 @@ import (
 // -- http://www.levigross.com/2015/11/21/mutual-tls-authentication-in-go/
 // -- http://johnnadratowski.github.io/2016/08/05/golang-tls.html
 
-const AppVersion = "0.4.2"
+const AppVersion = "0.4.3"
 
 var usage = `
   check_nsc_web is a REST client for the NSClient++ webserver for querying
@@ -98,17 +98,21 @@ func main() {
 	var flagPassword string
 	var flagTimeout int
 	var flagVerbose bool
+	var flagJSON bool
 	var flagVersion bool
 	var flagInsecure bool
 	var flagFloatround int
+	var flagExtratext string
 
 	flag.StringVar(&flagURL, "u", "", "NSCLient++ URL, for example https://10.1.2.3:8443.")
 	flag.StringVar(&flagPassword, "p", "", "NSClient++ webserver password.")
 	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds, defaults to 10.")
 	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
+	flag.BoolVar(&flagJSON, "j", false, "Print out JOSN response body.")
 	flag.BoolVar(&flagVersion, "V", false, "Print program version.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
+	flag.StringVar(&flagExtratext, "x", "", "Extra text to appear in output.")
 
 	ReturncodeMap := map[string]int{
 		"OK":       0,
@@ -223,6 +227,12 @@ func main() {
 	} else {
 		queryResult := new(Query)
 		json.NewDecoder(res.Body).Decode(queryResult)
+
+		if flagJSON {
+			jsonStr, _ := json.Marshal(queryResult)
+			fmt.Println(string(jsonStr))
+			os.Exit(0)
+		}
 
 		if len(queryResult.Payload) == 0 {
 			if flagVerbose {
