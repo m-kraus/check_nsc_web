@@ -40,8 +40,38 @@ OK: No entries found|'count'=0;0;0 'problem_count'=0;0;0
 ## Program help
 ```
 Usage of ./check_nsc_web:
-  -f  int
-      Round performance data float values to this number of digits
+
+  check_nsc_web is a REST client for the NSClient++ webserver for querying
+  and receiving check information over HTTPS.
+
+  Copyright 2016 Michael Kraus <Michael.Kraus@consol.de>
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+  Example:
+  check_nsc_web -p "password" -u "https://<SERVER_RUNNING_NSCLIENT>:8443" check_cpu
+
+  Usage:
+  check_nsc_web [options] [NSClient query parameters]
+
+  check_nsc_web can and should be built with CGO_ENABLED=0
+
+  Options:
+  -V	Print program version.
+  -f int
+    	Round performance data float values to this number of digits. (default -1)
+  -j	Print out JOSN response body.
   -k	Insecure mode - skip TLS verification.
   -p string
     	NSClient++ webserver password.
@@ -50,4 +80,6 @@ Usage of ./check_nsc_web:
   -u string
     	NSCLient++ URL, for example https://10.1.2.3:8443.
   -v	Enable verbose output.
+  -x string
+    	Extra text to appear in output.
 ```
