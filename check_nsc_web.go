@@ -74,7 +74,7 @@ type ResultLine struct {
 type QueryV1 struct {
 	Command string `json:"command"`
 	Lines	[]ResultLine `json:"lines"`
-	Result string `json:"result"`
+	Result int `json:"result"`
 }
 
 type QueryLeg struct {
@@ -95,12 +95,20 @@ type QueryLeg struct {
 	} `json:"payload"`
 }
 
+var ReturncodeMap = map[string]int{
+	"OK":       0,
+	"WARNING":  1,
+	"CRITICAL": 2,
+	"UNKNOWN":  3,
+}
+
 func (q QueryLeg) toV1() *QueryV1 {
 	qV1 := new(QueryV1)
 	if len(q.Payload) == 0 {
 		return qV1
 	}
 	qV1.Command = q.Payload[0].Command
+	qV1.Result = ReturncodeMap[q.Payload[0].Result]
 	qV1.Lines = make([]ResultLine, len(q.Payload[0].Lines))
 	for i, v := range(q.Payload[0].Lines) {
 		qV1.Lines[i].Perf = make(map[string]PerfLine)
@@ -148,12 +156,6 @@ func main() {
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
 	flag.StringVar(&flagExtratext, "x", "", "Extra text to appear in output.")
 
-	ReturncodeMap := map[string]int{
-		"OK":       0,
-		"WARNING":  1,
-		"CRITICAL": 2,
-		"UNKNOWN":  3,
-	}
 
 	flag.Parse()
 	if flagVersion {
@@ -336,7 +338,7 @@ func main() {
 		} else {
 			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
 		}
-		os.Exit(ReturncodeMap[queryResult.Result])
+		os.Exit(queryResult.Result)
 	}
 
 }
