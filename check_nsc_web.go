@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"net"
@@ -54,38 +55,75 @@ var usage = `
   Options:
 `
 
-//Query represents the nsclient response
-type Query struct {
+//Query represents the nsclient response, which itself decomposes in lines in which there may be several performance data
+type PerfLine struct {
+	Value    *float64 `json:"value,omitempty"`
+	Unit     *string  `json:"unit,omitempty"`
+	Warning  *float64 `json:"warning,omitempty"`
+	Critical *float64 `json:"critical,omitempty"`
+	Minimum  *float64 `json:"minimum,omitempty"`
+	Maximum  *float64 `json:"maximum,omitempty"`
+}
+
+type ResultLine struct {
+	Message string `json:"message"`
+	Perf	map[string]PerfLine `json:"perf"`
+}
+
+//Query type depends on API version (v1 or legacy)
+type QueryV1 struct {
+	Command string `json:"command"`
+	Lines	[]ResultLine `json:"lines"`
+	Result int `json:"result"`
+}
+
+type QueryLeg struct {
 	Header struct {
 		SourceID string `json:"source_id"`
 	} `json:"header"`
 	Payload []struct {
 		Command string `json:"command"`
-		Lines   []struct {
+		Lines	[]struct {
 			Message string `json:"message"`
-			Perf    []struct {
-				Alias    string `json:"alias"`
-				IntValue *struct {
-					Value    *int64  `json:"value,omitempty"`
-					Unit     *string `json:"unit,omitempty"`
-					Warning  *int64  `json:"warning,omitempty"`
-					Critical *int64  `json:"critical,omitempty"`
-					Minimum  *int64  `json:"minimum,omitempty"`
-					Maximum  *int64  `json:"maximum,omitempty"`
-				} `json:"int_value,omitempty"`
-				FloatValue *struct {
-					Value    *float64 `json:"value,omitempty"`
-					Unit     *string  `json:"unit,omitempty"`
-					Warning  *float64 `json:"warning,omitempty"`
-					Critical *float64 `json:"critical,omitempty"`
-					Minimum  *float64 `json:"minimum,omitempty"`
-					Maximum  *float64 `json:"maximum,omitempty"`
-				} `json:"float_value,omitempty"`
+			Perf	[]struct {
+				Alias	string `json:"alias"`
+				IntValue   *PerfLine `json:"int_value,omitempty"`
+				FloatValue *PerfLine `json:"float_value,omitempty"`
 			} `json:"perf"`
 		} `json:"lines"`
 		Result string `json:"result"`
 	} `json:"payload"`
 }
+
+var ReturncodeMap = map[string]int{
+	"OK":       0,
+	"WARNING":  1,
+	"CRITICAL": 2,
+	"UNKNOWN":  3,
+}
+
+func (q QueryLeg) toV1() *QueryV1 {
+	qV1 := new(QueryV1)
+	if len(q.Payload) == 0 {
+		return qV1
+	}
+	qV1.Command = q.Payload[0].Command
+	qV1.Result = ReturncodeMap[q.Payload[0].Result]
+	qV1.Lines = make([]ResultLine, len(q.Payload[0].Lines))
+	for i, v := range(q.Payload[0].Lines) {
+		qV1.Lines[i].Perf = make(map[string]PerfLine)
+		for _, p := range(v.Perf) {
+			if p.FloatValue != nil {
+				qV1.Lines[i].Perf[p.Alias] = *p.FloatValue
+			} else {
+				qV1.Lines[i].Perf[p.Alias] = *p.IntValue
+			}
+		}
+	}
+	return qV1
+}
+
+
 
 func main() {
 	flag.Usage = func() {
@@ -95,7 +133,9 @@ func main() {
 	}
 
 	var flagURL string
+	var flagLogin string
 	var flagPassword string
+	var flagAPIVersion string
 	var flagTimeout int
 	var flagVerbose bool
 	var flagJSON bool
@@ -105,21 +145,17 @@ func main() {
 	var flagExtratext string
 
 	flag.StringVar(&flagURL, "u", "", "NSCLient++ URL, for example https://10.1.2.3:8443.")
+	flag.StringVar(&flagLogin, "l", "admin", "NSClient++ webserver login.")
 	flag.StringVar(&flagPassword, "p", "", "NSClient++ webserver password.")
-	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds, defaults to 10.")
+	flag.StringVar(&flagAPIVersion, "a", "legacy", "API version of NSClient++ (legacy or 1).")
+	flag.IntVar(&flagTimeout, "t", 10, "Connection timeout in seconds.")
 	flag.BoolVar(&flagVerbose, "v", false, "Enable verbose output.")
-	flag.BoolVar(&flagJSON, "j", false, "Print out JOSN response body.")
+	flag.BoolVar(&flagJSON, "j", false, "Print out JSON response body.")
 	flag.BoolVar(&flagVersion, "V", false, "Print program version.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
 	flag.StringVar(&flagExtratext, "x", "", "Extra text to appear in output.")
 
-	ReturncodeMap := map[string]int{
-		"OK":       0,
-		"WARNING":  1,
-		"CRITICAL": 2,
-		"UNKNOWN":  3,
-	}
 
 	flag.Parse()
 	if flagVersion {
@@ -149,30 +185,34 @@ func main() {
 
 	if len(flag.Args()) == 0 {
 		urlStruct.Path += "/"
-	} else if len(flag.Args()) == 1 {
-		urlStruct.Path += "/query/" + flag.Arg(0)
 	} else {
-		urlStruct.Path += "/query/" + flag.Arg(0)
-		var param bytes.Buffer
-		for i, a := range flag.Args() {
-			if i == 0 {
-				continue
-			} else if i > 1 {
-				param.WriteString("&")
-			}
-
-			p := strings.SplitN(a, "=", 2)
-			if len(p) == 1 {
-				param.WriteString(url.QueryEscape(p[0]))
-			} else {
-				param.WriteString(url.QueryEscape(p[0]) + "=" + url.QueryEscape(p[1]))
-			}
-			if err != nil {
-				fmt.Println("UNKNOWN: " + err.Error())
-				os.Exit(3)
-			}
+		if flagAPIVersion == "1" {
+			urlStruct.Path += "/api/v1/queries/" + flag.Arg(0) + "/commands/execute"
+		} else {
+			urlStruct.Path += "/query/" + flag.Arg(0)
 		}
-		urlStruct.RawQuery = param.String()
+		if len(flag.Args()) > 1 {
+			var param bytes.Buffer
+			for i, a := range flag.Args() {
+				if i == 0 {
+					continue
+				} else if i > 1 {
+					param.WriteString("&")
+				}
+
+				p := strings.SplitN(a, "=", 2)
+				if len(p) == 1 {
+					param.WriteString(url.QueryEscape(p[0]))
+				} else {
+					param.WriteString(url.QueryEscape(p[0]) + "=" + url.QueryEscape(p[1]))
+				}
+				if err != nil {
+					fmt.Println("UNKNOWN: " + err.Error())
+					os.Exit(3)
+				}
+			}
+			urlStruct.RawQuery = param.String()
+		}
 	}
 
 	var hTransport = &http.Transport{
@@ -197,7 +237,11 @@ func main() {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
 	}
-	req.Header.Add("password", flagPassword)
+	if flagAPIVersion == "1" && flagLogin != "" {
+		req.Header.Add("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(flagLogin + ":" + flagPassword)))
+	} else {
+		req.Header.Add("password", flagPassword)
+	}
 
 	if flagVerbose {
 		dumpreq, err := httputil.DumpRequestOut(req, true)
@@ -225,8 +269,22 @@ func main() {
 		fmt.Println("OK: NSClient API reachable on " + flagURL)
 		os.Exit(0)
 	} else {
-		queryResult := new(Query)
-		json.NewDecoder(res.Body).Decode(queryResult)
+		queryResult := new(QueryV1)
+		if flagAPIVersion == "1" {
+			json.NewDecoder(res.Body).Decode(queryResult)
+		} else {
+			queryLeg := new(QueryLeg)
+			json.NewDecoder(res.Body).Decode(queryLeg)
+			if len(queryLeg.Payload) == 0 {
+				if flagVerbose {
+					fmt.Printf("QUERY RESULT:\n%+v\n", queryLeg)
+				}
+				fmt.Println("UNKNOWN: The resultpayload size is 0")
+				os.Exit(3)
+			}
+			queryResult = queryLeg.toV1()
+		}
+
 
 		if flagJSON {
 			jsonStr, _ := json.Marshal(queryResult)
@@ -234,20 +292,11 @@ func main() {
 			os.Exit(0)
 		}
 
-		if len(queryResult.Payload) == 0 {
-			if flagVerbose {
-				fmt.Printf("QUERY RESULT:\n%+v\n", queryResult)
-			}
-			fmt.Println("UNKNOWN: The resultpayload size is 0")
-			os.Exit(3)
-		}
-		result := queryResult.Payload[0].Result
-
 		var nagiosMessage string
 		var nagiosPerfdata bytes.Buffer
 
 		// FIXME how to iterate the slice of lines safely ?
-		for _, l := range queryResult.Payload[0].Lines {
+		for _, l := range queryResult.Lines {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
@@ -257,54 +306,30 @@ func main() {
 			cri := ""
 			min := ""
 			max := ""
-			for _, p := range l.Perf {
+			for m, p := range l.Perf {
 				// FIXME what if crit is set but not warn - there need to be unfilled semicolons
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
-				if p.FloatValue != nil {
-					if p.FloatValue.Value != nil {
-						val = strconv.FormatFloat(*(p.FloatValue.Value), 'f', flagFloatround, 64)
-					} else {
-						continue
-					}
-					if p.FloatValue.Unit != nil {
-						uni = (*(p.FloatValue.Unit))
-					}
-					if p.FloatValue.Warning != nil {
-						war = strconv.FormatFloat(*(p.FloatValue.Warning), 'f', flagFloatround, 64)
-					}
-					if p.FloatValue.Critical != nil {
-						cri = strconv.FormatFloat(*(p.FloatValue.Critical), 'f', flagFloatround, 64)
-					}
-					if p.FloatValue.Minimum != nil {
-						min = strconv.FormatFloat(*(p.FloatValue.Minimum), 'f', flagFloatround, 64)
-					}
-					if p.FloatValue.Maximum != nil {
-						max = strconv.FormatFloat(*(p.FloatValue.Maximum), 'f', flagFloatround, 64)
-					}
+				if p.Value != nil {
+					val = strconv.FormatFloat(*(p.Value), 'f', flagFloatround, 64)
+				} else {
+					continue
 				}
-				if p.IntValue != nil {
-					if p.IntValue.Value != nil {
-						val = strconv.FormatInt(*(p.IntValue.Value), 10)
-					} else {
-						continue
-					}
-					if p.IntValue.Unit != nil {
-						uni = (*(p.IntValue.Unit))
-					}
-					if p.IntValue.Warning != nil {
-						war = strconv.FormatInt(*(p.IntValue.Warning), 10)
-					}
-					if p.IntValue.Critical != nil {
-						cri = strconv.FormatInt(*(p.IntValue.Critical), 10)
-					}
-					if p.IntValue.Minimum != nil {
-						min = strconv.FormatInt(*(p.IntValue.Minimum), 10)
-					}
-					if p.IntValue.Maximum != nil {
-						max = strconv.FormatInt(*(p.IntValue.Maximum), 10)
-					}
+				if p.Unit != nil {
+					uni = (*(p.Unit))
 				}
-				nagiosPerfdata.WriteString(" '" + p.Alias + "'=" + val + uni + ";" + war + ";" + cri + ";" + min + ";" + max)
+				if p.Warning != nil {
+					war = strconv.FormatFloat(*(p.Warning), 'f', flagFloatround, 64)
+				}
+				if p.Critical != nil {
+					cri = strconv.FormatFloat(*(p.Critical), 'f', flagFloatround, 64)
+				}
+				if p.Minimum != nil {
+					min = strconv.FormatFloat(*(p.Minimum), 'f', flagFloatround, 64)
+				}
+				if p.Maximum != nil {
+					max = strconv.FormatFloat(*(p.Maximum), 'f', flagFloatround, 64)
+				}
+				nagiosPerfdata.WriteString(" '" + m + "'=" + val + uni + ";" + war + ";" + cri + ";" + min + ";" + max)
 			}
 		}
 
@@ -313,7 +338,7 @@ func main() {
 		} else {
 			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
 		}
-		os.Exit(ReturncodeMap[result])
+		os.Exit(queryResult.Result)
 	}
 
 }
