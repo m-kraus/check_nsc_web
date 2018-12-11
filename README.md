@@ -69,6 +69,8 @@ Usage of ./check_nsc_web:
 
   Options:
   -V	Print program version.
+  -a string
+    	API version of NSClient++ (legacy or 1). (default "legacy")
   -f int
     	Round performance data float values to this number of digits. (default -1)
   -j	Print out JOSN response body.

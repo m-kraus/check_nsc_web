@@ -18,10 +18,7 @@ import (
 )
 
 // TODO
-// - specify cert
-// - specify ciphers
-// -- http://www.levigross.com/2015/11/21/mutual-tls-authentication-in-go/
-// -- http://johnnadratowski.github.io/2016/08/05/golang-tls.html
+// - strip trailing / from url
 
 const AppVersion = "0.4.3"
 
