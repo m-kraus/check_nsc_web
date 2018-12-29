@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -19,8 +19,9 @@ import (
 
 // TODO
 // - strip trailing / from url
+// - what about value being int64 in legacy api in PerfLine struct?
 
-const AppVersion = "0.4.3"
+const AppVersion = "0.5.1"
 
 var usage = `
   check_nsc_web is a REST client for the NSClient++ webserver for querying
@@ -63,15 +64,15 @@ type PerfLine struct {
 }
 
 type ResultLine struct {
-	Message string `json:"message"`
-	Perf	map[string]PerfLine `json:"perf"`
+	Message string              `json:"message"`
+	Perf    map[string]PerfLine `json:"perf"`
 }
 
 //Query type depends on API version (v1 or legacy)
 type QueryV1 struct {
-	Command string `json:"command"`
-	Lines	[]ResultLine `json:"lines"`
-	Result int `json:"result"`
+	Command string       `json:"command"`
+	Lines   []ResultLine `json:"lines"`
+	Result  int          `json:"result"`
 }
 
 type QueryLeg struct {
@@ -80,10 +81,10 @@ type QueryLeg struct {
 	} `json:"header"`
 	Payload []struct {
 		Command string `json:"command"`
-		Lines	[]struct {
+		Lines   []struct {
 			Message string `json:"message"`
-			Perf	[]struct {
-				Alias	string `json:"alias"`
+			Perf    []struct {
+				Alias      string    `json:"alias"`
 				IntValue   *PerfLine `json:"int_value,omitempty"`
 				FloatValue *PerfLine `json:"float_value,omitempty"`
 			} `json:"perf"`
@@ -107,9 +108,10 @@ func (q QueryLeg) toV1() *QueryV1 {
 	qV1.Command = q.Payload[0].Command
 	qV1.Result = ReturncodeMap[q.Payload[0].Result]
 	qV1.Lines = make([]ResultLine, len(q.Payload[0].Lines))
-	for i, v := range(q.Payload[0].Lines) {
+	for i, v := range q.Payload[0].Lines {
+		qV1.Lines[i].Message = v.Message
 		qV1.Lines[i].Perf = make(map[string]PerfLine)
-		for _, p := range(v.Perf) {
+		for _, p := range v.Perf {
 			if p.FloatValue != nil {
 				qV1.Lines[i].Perf[p.Alias] = *p.FloatValue
 			} else {
@@ -119,8 +121,6 @@ func (q QueryLeg) toV1() *QueryV1 {
 	}
 	return qV1
 }
-
-
 
 func main() {
 	flag.Usage = func() {
@@ -152,7 +152,6 @@ func main() {
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
 	flag.StringVar(&flagExtratext, "x", "", "Extra text to appear in output.")
-
 
 	flag.Parse()
 	if flagVersion {
@@ -235,7 +234,7 @@ func main() {
 		os.Exit(3)
 	}
 	if flagAPIVersion == "1" && flagLogin != "" {
-		req.Header.Add("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(flagLogin + ":" + flagPassword)))
+		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(flagLogin+":"+flagPassword)))
 	} else {
 		req.Header.Add("password", flagPassword)
 	}
@@ -281,7 +280,6 @@ func main() {
 			}
 			queryResult = queryLeg.toV1()
 		}
-
 
 		if flagJSON {
 			jsonStr, _ := json.Marshal(queryResult)
