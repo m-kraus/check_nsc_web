@@ -84,4 +84,6 @@ Usage of ./check_nsc_web:
   -v	Enable verbose output.
   -x string
     	Extra text to appear in output.
+  -l string
+        NSClient++ webserver login. (default "admin")
 ```
