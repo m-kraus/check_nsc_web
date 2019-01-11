@@ -253,6 +253,13 @@ func main() {
 	}
 	defer res.Body.Close()
 
+	// check http status code
+	// getting 403 here means we're not allowed on the target (e.g. allowed hosts)
+	if res.Status == "403" {
+		fmt.Println("HTTP 403: Forbidden.")
+		os.Exit(3)
+	}
+
 	if flagVerbose {
 		dumpres, err := httputil.DumpResponse(res, true)
 		if err != nil {
