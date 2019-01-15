@@ -21,7 +21,7 @@ import (
 // - strip trailing / from url
 // - what about value being int64 in legacy api in PerfLine struct?
 
-const AppVersion = "0.5.1"
+const AppVersion = "0.5.2"
 
 var usage = `
   check_nsc_web is a REST client for the NSClient++ webserver for querying
@@ -222,6 +222,7 @@ func main() {
 		}).Dial,
 		ResponseHeaderTimeout: timeout,
 		TLSHandshakeTimeout:   timeout,
+		IdleConnTimeout:       timeout,
 	}
 	var hClient = &http.Client{
 		Timeout:   timeout,
@@ -336,9 +337,9 @@ func main() {
 		}
 
 		if nagiosPerfdata.Len() == 0 {
-			fmt.Println(nagiosMessage)
+			fmt.Println(nagiosMessage + " " + flagExtratext)
 		} else {
-			fmt.Println(nagiosMessage + "|" + strings.TrimSpace(nagiosPerfdata.String()))
+			fmt.Println(nagiosMessage + " " + flagExtratext + "|" + strings.TrimSpace(nagiosPerfdata.String()))
 		}
 		os.Exit(queryResult.Result)
 	}
