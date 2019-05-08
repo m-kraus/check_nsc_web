@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,13 +14,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/namsral/flag"
 )
 
 // TODO
 // - strip trailing / from url
 // - what about value being int64 in legacy api in PerfLine struct?
 
-const AppVersion = "0.5.2"
+const AppVersion = "0.5.3"
 
 var usage = `
   check_nsc_web is a REST client for the NSClient++ webserver for querying
@@ -140,6 +141,7 @@ func main() {
 	var flagInsecure bool
 	var flagFloatround int
 	var flagExtratext string
+	var flagQuery string
 
 	flag.StringVar(&flagURL, "u", "", "NSCLient++ URL, for example https://10.1.2.3:8443.")
 	flag.StringVar(&flagLogin, "l", "admin", "NSClient++ webserver login.")
@@ -151,9 +153,13 @@ func main() {
 	flag.BoolVar(&flagVersion, "V", false, "Print program version.")
 	flag.BoolVar(&flagInsecure, "k", false, "Insecure mode - skip TLS verification.")
 	flag.IntVar(&flagFloatround, "f", -1, "Round performance data float values to this number of digits.")
-	flag.StringVar(&flagExtratext, "x", "", "Extra text to appear in output.")
+
+	// These flags support loading config from file using "-config FILENAME"
+	flag.StringVar(&flagQuery, "query", "", "placeholder for query string from config file")
+	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 
 	flag.Parse()
+
 	if flagVersion {
 		fmt.Fprintln(os.Stderr, "check_nsc_web v"+AppVersion)
 		os.Exit(0)
@@ -171,6 +177,13 @@ func main() {
 		}
 	}
 
+	args := flag.Args()
+	// Has there a flag "query" been provided in the config file? Transform it into slice and append it to Args()
+	if seen["query"] {
+		q := strings.Split(flagQuery, " ")
+		args = append(args, q...)
+	}
+
 	timeout := time.Second * time.Duration(flagTimeout)
 
 	urlStruct, err := url.Parse(flagURL)
@@ -179,17 +192,17 @@ func main() {
 		os.Exit(3)
 	}
 
-	if len(flag.Args()) == 0 {
+	if len(args) == 0 {
 		urlStruct.Path += "/"
 	} else {
 		if flagAPIVersion == "1" {
-			urlStruct.Path += "/api/v1/queries/" + flag.Arg(0) + "/commands/execute"
+			urlStruct.Path += "/api/v1/queries/" + args[0] + "/commands/execute"
 		} else {
-			urlStruct.Path += "/query/" + flag.Arg(0)
+			urlStruct.Path += "/query/" + args[0]
 		}
-		if len(flag.Args()) > 1 {
+		if len(args) > 1 {
 			var param bytes.Buffer
-			for i, a := range flag.Args() {
+			for i, a := range args {
 				if i == 0 {
 					continue
 				} else if i > 1 {
@@ -269,7 +282,7 @@ func main() {
 		fmt.Printf("RESPONSE:\n%q\n", dumpres)
 	}
 
-	if len(flag.Args()) == 0 {
+	if len(args) == 0 {
 		fmt.Println("OK: NSClient API reachable on " + flagURL)
 		os.Exit(0)
 	} else {

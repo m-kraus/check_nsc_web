@@ -37,6 +37,22 @@ check_nsc_web -k -p "password from nsclient.ini" -u "https://<SERVER_RUNNING_NSC
 OK: No entries found|'count'=0;0;0 'problem_count'=0;0;0
 ```
 
+* Reading parameters and queries from file
+```
+check_nsc_web -config ./sample.conf
+OK: 5m: 0%, 1m: 0%, 5s: 0% |'total 5m'=0%;80;90;; 'total 1m'=0%;80;90;; 'total 5s'=0%;80;90;;
+```
+
+Contents of ```sample.conf```:
+```
+u https://127.0.0.1:28443
+p password
+k true
+query check_cpu show-all
+```
+
+Please note, that everything after query will be *appended* to existing query arguments.
+
 ## Program help
 ```
 Usage of ./check_nsc_web:
@@ -68,22 +84,24 @@ Usage of ./check_nsc_web:
   check_nsc_web can and should be built with CGO_ENABLED=0
 
   Options:
-  -V	Print program version.
+  -V Print program version.
   -a string
-    	API version of NSClient++ (legacy or 1). (default "legacy")
+    API version of NSClient++ (legacy or 1). (default "legacy")
   -f int
-    	Round performance data float values to this number of digits. (default -1)
-  -j	Print out JOSN response body.
-  -k	Insecure mode - skip TLS verification.
+    Round performance data float values to this number of digits. (default -1)
+  -j Print out JOSN response body.
+  -k Insecure mode - skip TLS verification.
   -p string
-    	NSClient++ webserver password.
+    NSClient++ webserver password.
   -t int
-    	Connection timeout in seconds, defaults to 10. (default 10)
+    Connection timeout in seconds, defaults to 10. (default 10)
   -u string
-    	NSCLient++ URL, for example https://10.1.2.3:8443.
-  -v	Enable verbose output.
+    NSCLient++ URL, for example https://10.1.2.3:8443.
+  -v Enable verbose output.
   -x string
-    	Extra text to appear in output.
+    Extra text to appear in output.
   -l string
-        NSClient++ webserver login. (default "admin")
+    NSClient++ webserver login. (default "admin")
+  -config file_location
+    Location of file with argument/query configuration
 ```
