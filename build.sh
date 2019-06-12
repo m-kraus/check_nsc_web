@@ -2,6 +2,8 @@
 
 set -x
 
+go get ./...
+
 mkdir -p build/linux/amd64
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags -s -o build/linux/amd64/check_nsc_web check_nsc_web.go
 mkdir -p build/linux/386
