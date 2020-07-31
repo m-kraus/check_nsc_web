@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -265,7 +268,6 @@ func main() {
 		fmt.Println("UNKNOWN: " + err.Error())
 		os.Exit(3)
 	}
-	defer res.Body.Close()
 
 	// check http status code
 	// getting 403 here means we're not allowed on the target (e.g. allowed hosts)
@@ -282,16 +284,23 @@ func main() {
 		fmt.Printf("RESPONSE:\n%q\n", dumpres)
 	}
 
+	log.SetOutput(ioutil.Discard)
+	contents, err := extractHTTPResponse(res)
+	if err != nil {
+		fmt.Printf("RESPONSE-ERROR:\n%s\n", err.Error())
+	}
+	hClient.CloseIdleConnections()
+
 	if len(args) == 0 {
 		fmt.Println("OK: NSClient API reachable on " + flagURL)
 		os.Exit(0)
 	} else {
 		queryResult := new(QueryV1)
 		if flagAPIVersion == "1" {
-			json.NewDecoder(res.Body).Decode(queryResult)
+			json.Unmarshal(contents, &queryResult)
 		} else {
 			queryLeg := new(QueryLeg)
-			json.NewDecoder(res.Body).Decode(queryLeg)
+			json.Unmarshal(contents, &queryLeg)
 			if len(queryLeg.Payload) == 0 {
 				if flagVerbose {
 					fmt.Printf("QUERY RESULT:\n%+v\n", queryLeg)
@@ -357,4 +366,17 @@ func main() {
 		os.Exit(queryResult.Result)
 	}
 
+}
+
+func extractHTTPResponse(response *http.Response) (contents []byte, err error) {
+	contents, err = ioutil.ReadAll(response.Body)
+	io.Copy(ioutil.Discard, response.Body)
+	response.Body.Close()
+	if err != nil {
+		return
+	}
+	if response.StatusCode != 200 {
+		err = fmt.Errorf("http request failed: %s", response.Status)
+	}
+	return
 }
