@@ -162,7 +162,7 @@ func main() {
 
 	if flagVersion {
 		fmt.Fprintln(os.Stderr, "check_nsc_web v"+AppVersion)
-		os.Exit(0)
+		os.Exit(3)
 	}
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) {
