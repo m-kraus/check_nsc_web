@@ -325,15 +325,15 @@ func main() {
 
 			nagiosMessage = strings.TrimSpace(l.Message)
 
-			val := ""
-			uni := ""
-			war := ""
-			cri := ""
-			min := ""
-			max := ""
 			for m, p := range l.Perf {
 				// FIXME what if crit is set but not warn - there need to be unfilled semicolons
 				// REFERENCE 'label'=value[UOM];[warn];[crit];[min];[max]
+				val := ""
+				uni := ""
+				war := ""
+				cri := ""
+				min := ""
+				max := ""
 				if p.Value != nil {
 					val = strconv.FormatFloat(*(p.Value), 'f', flagFloatround, 64)
 				} else {
