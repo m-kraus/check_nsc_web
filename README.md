@@ -1,3 +1,5 @@
+*This plugin is not maintained any more - development continues there: https://github.com/ConSol-Monitoring/check_nsc_web*
+
 # About *check_nsc_web*
 
 *check_nsc_web* collects check results from NSClient++ agents using its brand-new REST API. It is an alternative to check_nrpe et al.
